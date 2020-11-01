@@ -1,6 +1,6 @@
 ## Light Indexed Deferred Lighting using Direct3D12
 
-This demo is based on original demo [GitHub Pages](https://github.com/dtrebilco/lightindexed-deferredrender)
+This demo is based on original demo [Light Indexed Deferred Rendering](https://github.com/dtrebilco/lightindexed-deferredrender)
 
 # Purpose
 
@@ -8,13 +8,14 @@ This demo is based on original demo [GitHub Pages](https://github.com/dtrebilco/
 2) Replace bit operations to integer textures
 3) Upgrade to modern Deferred techique like as Tiled/Clustered Forward+ Shading 
 
-#Requirements:
+# Requirements:
 
 1. Visual Studio 2017 and above
 2. GPU With Direct3D12 support
 
-#Screen shot from the demo
+# Screen shot from the demo
 
+![Screenshot](https://github.com/Andreyogld3d/LightIndexedDeferredRendering_Direct3D12/blob/master/screenshot.png)
 
 
 
