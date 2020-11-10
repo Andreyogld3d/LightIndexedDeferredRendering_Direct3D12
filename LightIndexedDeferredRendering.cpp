@@ -15,6 +15,8 @@
 
 //#define GPU_CULLING
 
+//#define USE_PERSPECTIVE_RIGHT_HANDLED
+
 namespace {
 	struct MeshParameters;
 
@@ -343,10 +345,44 @@ LightIndexedDeferredShading::LightIndexedDeferredShading(UINT width, UINT height
 {
 }
 
+void PerspectiveMatrix(float* Matrix, float fov, float aspect, float zNear, float zFar)
+{
+	assert(fov > 0 && "Invalid Value");
+	assert(aspect > 0 && "Invalid Value");
+	assert(zFar > zNear && "Invalid Value");
+	assert(zNear != zFar && "Invalid Value");
+
+	float yScale = 1.0f / tanf(degrad * fov * 0.5f);
+	Matrix[0] = yScale / aspect;
+	Matrix[1] = 0.0f;
+	Matrix[2] = 0.0f;
+	Matrix[3] = 0.0f;
+
+	Matrix[4] = 0.0f;
+	Matrix[5] = yScale;
+	Matrix[6] = 0.0f;
+	Matrix[7] = 0.0f;
+
+	Matrix[8] = 0.0f;
+	Matrix[9] = 0.0f;
+	Matrix[10] = zFar / (zNear - zFar);// new code change
+	Matrix[11] = -1.0f;	 // new code change
+
+	Matrix[12] = 0.0f;
+	Matrix[13] = 0.0f;
+	Matrix[14] = zNear * zFar / (zNear - zFar);
+	Matrix[15] = 0.0f;
+}
+
 void LightIndexedDeferredShading::InitCamera()
 {
 	camera.SetAspect(m_viewport.Width / m_viewport.Height);
-	camera.GetProjectionMatrix().PerspectiveFovDirect3D(camera.GetFov(), camera.GetAspect(), camera.GetzNear(), camera.GetzFar());
+	Matrix4x4& m = camera.GetProjectionMatrix();
+#ifndef USE_PERSPECTIVE_RIGHT_HANDLED
+	m.PerspectiveFovDirect3D(camera.GetFov(), camera.GetAspect(), camera.GetzNear(), camera.GetzFar());
+#else
+	PerspectiveMatrix(m, camera.GetFov(), camera.GetAspect(), camera.GetzNear(), camera.GetzFar());
+#endif
 	camera.SetPosition(Vector3D(0.0f, 10.0f, 0.0f));
 }
 
@@ -1400,7 +1436,11 @@ void LightIndexedDeferredShading::OnUpdate()
 	MousePosition.x = x;
 	MousePosition.y = y;
 	camera.Rotate(-DMousePosition * 0.1f);
+#ifndef USE_PERSPECTIVE_RIGHT_HANDLED
 	camera.UpdateCamera();
+#else
+	camera.UpdateCamera(-1);
+#endif
 	camera.ExtractFrustum();
 
 	const Matrix4x4& viewMatrix = camera.GetViewMatrix();
