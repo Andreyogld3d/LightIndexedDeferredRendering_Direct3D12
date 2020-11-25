@@ -37,9 +37,8 @@ VS_OUTPUT VSmain(float4 Pos: POSITION, float3 Normal: NORMAL, float2 texCoord: T
 	Out.position = mul(float4(Pos.xyz, 1.0f), ViewProjMatrix);
 	Out.worldPos = mul(float4(Pos.xyz, 1.0f), ViewMatrix).xyz;
 	Out.texCoord = texCoord;
-	//Out.viewDir = cameraPosition.xyz - Out.worldPos;
 	Out.viewDir = cameraPosition.xyz - Pos.xyz;
-	Out.normal = Normal;
+	Out.normal =  mul(Normal, (float3x3)ViewMatrix);
 	Out.lightProjSpaceLokup = CalcLightProjSpaceLookup(Out.position);
 	return Out;
 }
