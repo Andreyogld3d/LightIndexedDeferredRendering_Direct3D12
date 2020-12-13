@@ -229,7 +229,7 @@ public:
 		return true;
 	}
 	// if ray intersect plane
-	INLINE bool Intersect(const Vector3D& org, const Vector3D& dir) const
+	INLINE bool Intersect(const Vector3D& dir) const
 	{
 		// A*x + B*y + C*z + d = 0 normal * point + d = 0
 		//point = origin + direction * t = 0:

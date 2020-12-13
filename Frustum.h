@@ -6,7 +6,7 @@
 #define __FRUSTUM_H__
 
 #include "Plane.h"
-#include "Vector4D.h"
+#include "Matrix4x4.h"
 #include "types.h"
 #include <cstddef>
 
@@ -31,7 +31,7 @@ private:
 	{
 		return value * value;
 	}
-	INLINE int Classify(const Plane& plane, int nearPointMask, const Vector3D& minPoint, const Vector3D& maxPoint, const Plane *intersectPlane) const
+	INLINE int Classify(const Plane& plane, int nearPointMask, const Vector3D& minPoint, const Vector3D& maxPoint) const
 	{
 		const Vector3D& nearPoint = plane.MakeNearPoint(nearPointMask, minPoint, maxPoint);
 
@@ -44,7 +44,6 @@ private:
 		if (plane.ClassifyPoint(farPoint) == Plane::BACK_PLANE) {
 			return Plane::BACK_PLANE;
 		}
-		assert(intersectPlane && "NULL Pointer");
 		return Plane::IN_PLANE;
 	}
 	INLINE int Classify(const Plane& plane, int nearPointMask, const Vector3D& minPoint, const Vector3D& maxPoint, bool& isIntersect) const
@@ -61,21 +60,6 @@ private:
 			return Plane::BACK_PLANE;
 		}
 		isIntersect = true;
-		return Plane::IN_PLANE;
-	}
-	INLINE int Classify(const Plane& plane, int nearPointMask, const Vector3D& minPoint, const Vector3D& maxPoint) const
-	{
-		const Vector3D& nearPoint = plane.MakeNearPoint(nearPointMask, minPoint, maxPoint);
-
-		if (plane.ClassifyPoint(nearPoint) == Plane::FRONT_PLANE) {
-			return Plane::FRONT_PLANE;
-		}
-
-		const Vector3D &farPoint = plane.MakeFarPoint(nearPointMask, minPoint, maxPoint);
-
-		if (plane.ClassifyPoint(farPoint) == Plane::BACK_PLANE) {
-			return Plane::BACK_PLANE;
-		}
 		return Plane::IN_PLANE;
 	}
 public:
@@ -145,33 +129,9 @@ public:
 		planes[NEARPLANE].ComputeNearPointMask(nearPointMasks[NEARPLANE]);
 
 	}
-	// Функция расчета пирамиды
-	INLINE void ExtractFrustum(const float* proj, const float* modl/*, bool IsNormalize = false*/)
+	// Calculate Frustum planes
+	INLINE void ExtractFrustum(const Matrix4x4& clip)
 	{
-		assert(proj && "NULL Pointer");
-		assert(modl && "NULL Pointer");
-		float clip[16];
-		// 
-		clip[ 0] = modl[ 0] * proj[ 0] + modl[ 1] * proj[ 4] + modl[ 2] * proj[ 8] + modl[ 3] * proj[12];
-		clip[ 1] = modl[ 0] * proj[ 1] + modl[ 1] * proj[ 5] + modl[ 2] * proj[ 9] + modl[ 3] * proj[13];
-		clip[ 2] = modl[ 0] * proj[ 2] + modl[ 1] * proj[ 6] + modl[ 2] * proj[10] + modl[ 3] * proj[14];
-		clip[ 3] = modl[ 0] * proj[ 3] + modl[ 1] * proj[ 7] + modl[ 2] * proj[11] + modl[ 3] * proj[15];
-
-		clip[ 4] = modl[ 4] * proj[ 0] + modl[ 5] * proj[ 4] + modl[ 6] * proj[ 8] + modl[ 7] * proj[12];
-		clip[ 5] = modl[ 4] * proj[ 1] + modl[ 5] * proj[ 5] + modl[ 6] * proj[ 9] + modl[ 7] * proj[13];
-		clip[ 6] = modl[ 4] * proj[ 2] + modl[ 5] * proj[ 6] + modl[ 6] * proj[10] + modl[ 7] * proj[14];
-		clip[ 7] = modl[ 4] * proj[ 3] + modl[ 5] * proj[ 7] + modl[ 6] * proj[11] + modl[ 7] * proj[15];
-
-		clip[ 8] = modl[ 8] * proj[ 0] + modl[ 9] * proj[ 4] + modl[10] * proj[ 8] + modl[11] * proj[12];
-		clip[ 9] = modl[ 8] * proj[ 1] + modl[ 9] * proj[ 5] + modl[10] * proj[ 9] + modl[11] * proj[13];
-		clip[10] = modl[ 8] * proj[ 2] + modl[ 9] * proj[ 6] + modl[10] * proj[10] + modl[11] * proj[14];
-		clip[11] = modl[ 8] * proj[ 3] + modl[ 9] * proj[ 7] + modl[10] * proj[11] + modl[11] * proj[15];
-
-		clip[12] = modl[12] * proj[ 0] + modl[13] * proj[ 4] + modl[14] * proj[ 8] + modl[15] * proj[12];
-		clip[13] = modl[12] * proj[ 1] + modl[13] * proj[ 5] + modl[14] * proj[ 9] + modl[15] * proj[13];
-		clip[14] = modl[12] * proj[ 2] + modl[13] * proj[ 6] + modl[14] * proj[10] + modl[15] * proj[14];
-		clip[15] = modl[12] * proj[ 3] + modl[13] * proj[ 7] + modl[14] * proj[11] + modl[15] * proj[15];
-
 		// compute all palnes
 		Plane& right = planes[RIGHTPLANE];
 		//
@@ -229,6 +189,11 @@ public:
 		Far *= t;
 		// }
 #endif
+	}
+	INLINE void ExtractFrustum(const Matrix4x4& proj, const Matrix4x4& view)
+	{
+		const Matrix4x4 viewProj = proj * view;
+		ExtractFrustum(viewProj);
 	}
 	// Sphere in frustum
 	INLINE bool SphereInFrustum(const Vector3D& center, float radius) const
@@ -434,24 +399,24 @@ public:
 		return true;
 	}
 	// Check BoundingBox visibility in frustum
-	INLINE bool BoundingBoxInFrustum(const Vector3D& minPoint, const Vector3D& maxPoint, const Plane* intersectPlane) const
+	INLINE bool BoundingBoxInFrustum(const Vector3D& minPoint, const Vector3D& maxPoint) const
 	{
-		if (Classify(planes[NEARPLANE], nearPointMasks[NEARPLANE], minPoint, maxPoint, intersectPlane) == Plane::BACK_PLANE) {
+		if (Classify(planes[NEARPLANE], nearPointMasks[NEARPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
 			return false;
 		}
-		if (Classify(planes[FARPLANE], nearPointMasks[FARPLANE], minPoint, maxPoint, intersectPlane) == Plane::BACK_PLANE) {
+		if (Classify(planes[FARPLANE], nearPointMasks[FARPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
 			return false;
 		}
-		if (Classify(planes[RIGHTPLANE], nearPointMasks[RIGHTPLANE], minPoint, maxPoint, intersectPlane) == Plane::BACK_PLANE) {
+		if (Classify(planes[RIGHTPLANE], nearPointMasks[RIGHTPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
 			return false;
 		}
-		if (Classify(planes[LEFTPLANE], nearPointMasks[LEFTPLANE], minPoint, maxPoint, intersectPlane) == Plane::BACK_PLANE) {
+		if (Classify(planes[LEFTPLANE], nearPointMasks[LEFTPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
 			 return false;
 		}
-		if (Classify(planes[TOPPLANE], nearPointMasks[TOPPLANE], minPoint, maxPoint, intersectPlane) == Plane::BACK_PLANE) {
+		if (Classify(planes[TOPPLANE], nearPointMasks[TOPPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
 			return false;
 		}
-		if (Classify(planes[BOTTOMPLANE], nearPointMasks[BOTTOMPLANE], minPoint, maxPoint, intersectPlane) == Plane::BACK_PLANE) {
+		if (Classify(planes[BOTTOMPLANE], nearPointMasks[BOTTOMPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
 			return false;
 		}
 		return true;
@@ -479,29 +444,6 @@ public:
 		}
 		return true;
 	}
-	// Check BoundingBox visibility in frustum
-	INLINE bool BoundingBoxInFrustum(const Vector3D& minPoint, const Vector3D& maxPoint) const
-	{
-		if (Classify(planes[NEARPLANE], nearPointMasks[NEARPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
-			return false;
-		}
-		if (Classify(planes[FARPLANE], nearPointMasks[FARPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
-			return false;
-		}
-		if (Classify(planes[RIGHTPLANE], nearPointMasks[RIGHTPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
-			return false;
-		}
-		if (Classify(planes[LEFTPLANE], nearPointMasks[LEFTPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
-			return false;
-		}
-		if (Classify(planes[TOPPLANE], nearPointMasks[TOPPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
-			return false;
-		}
-		if (Classify(planes[BOTTOMPLANE], nearPointMasks[BOTTOMPLANE], minPoint, maxPoint) == Plane::BACK_PLANE) {
-			return false;
-		}
-		return true;
-	}
 	// Calculate points for frustum
 	INLINE void CalculatePoints(Vector3D* points) const
 	{
@@ -515,24 +457,24 @@ public:
 		}
 	}
 	// Intersect plane by Ray
-	bool IntersectByRay(const Vector3D& org, const Vector3D& dir) const
+	bool IntersectByRay(const Vector3D& dir) const
 	{
-		if (planes[LEFTPLANE].Intersect(org, dir)) {
+		if (planes[LEFTPLANE].Intersect(dir)) {
 			return true;
 		}
-		if (planes[RIGHTPLANE].Intersect(org, dir)) {
+		if (planes[RIGHTPLANE].Intersect(dir)) {
 			return true;
 		}
-		if (planes[TOPPLANE].Intersect(org, dir)) {
+		if (planes[TOPPLANE].Intersect(dir)) {
 			return true;
 		}
-		if (planes[BOTTOMPLANE].Intersect(org, dir)) {
+		if (planes[BOTTOMPLANE].Intersect(dir)) {
 			return true;
 		}
-		if (planes[NEARPLANE].Intersect(org, dir)) {
+		if (planes[NEARPLANE].Intersect(dir)) {
 			return true;
 		}
-		if (planes[FARPLANE].Intersect(org, dir)) {
+		if (planes[FARPLANE].Intersect(dir)) {
 			return true;
 		}
 		return false;
