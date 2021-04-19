@@ -38,12 +38,12 @@ struct DescriptorSet {
 	//std::array<>
 };
 
-class LightIndexedDeferredShading : public DXSample
+class LightIndexedDeferredRendering : public DXSample
 {
 public:
 	static const uint maxLights = 255;
-	LightIndexedDeferredShading(UINT width, UINT height, std::wstring name);
-
+	LightIndexedDeferredRendering(UINT width, UINT height, std::wstring name);
+	~LightIndexedDeferredRendering() {}
     virtual void OnInit();
     virtual void OnUpdate();
     virtual void OnRender();
@@ -207,8 +207,8 @@ private:
     // Pipeline objects.
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissorRect;
-    ComPtr<IDXGISwapChain3> m_swapChain;
     ComPtr<ID3D12Device> m_device;
+	ComPtr<IDXGISwapChain3> m_swapChain;
     ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<ID3D12Resource> m_depthStencil;
     ComPtr<ID3D12CommandAllocator> m_commandAllocator;

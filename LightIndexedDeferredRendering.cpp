@@ -10,7 +10,7 @@
 //*********************************************************
 
 #include "stdafx.h"
-#include "LightIndexedDeferredShading.h"
+#include "LightIndexedDeferredRendering.h"
 #include "Timer.h"
 
 //#define GPU_CULLING
@@ -59,7 +59,7 @@ namespace {
 	Timer timer;
 	float emulationTime = 0.1f;
 
-	static const uint numLights = LightIndexedDeferredShading::maxLights;
+	static const uint numLights = LightIndexedDeferredRendering::maxLights;
 	
 	void outError(ID3DBlob* ppErrorMsgs)
 	{
@@ -336,7 +336,7 @@ namespace {
 
 }
 
-LightIndexedDeferredShading::LightIndexedDeferredShading(UINT width, UINT height, std::wstring name) :
+LightIndexedDeferredRendering::LightIndexedDeferredRendering(UINT width, UINT height, std::wstring name) :
     DXSample(width, height, name),
     m_frameIndex(0),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
@@ -374,7 +374,7 @@ void PerspectiveMatrix(float* Matrix, float fov, float aspect, float zNear, floa
 	Matrix[15] = 0.0f;
 }
 
-void LightIndexedDeferredShading::InitCamera()
+void LightIndexedDeferredRendering::InitCamera()
 {
 	camera.SetAspect(m_viewport.Width / m_viewport.Height);
 	Matrix4x4& m = camera.GetProjectionMatrix();
@@ -386,7 +386,7 @@ void LightIndexedDeferredShading::InitCamera()
 	camera.SetPosition(Vector3D(0.0f, 10.0f, 0.0f));
 }
 
-void LightIndexedDeferredShading::OnInit()
+void LightIndexedDeferredRendering::OnInit()
 {
 	timer.Init();
 	InitCamera();
@@ -394,7 +394,7 @@ void LightIndexedDeferredShading::OnInit()
     LoadAssets();
 }
 
-ID3D12Resource* LightIndexedDeferredShading::CreateConstantBuffer(size_t size)
+ID3D12Resource* LightIndexedDeferredRendering::CreateConstantBuffer(size_t size)
 {
 	ID3D12Resource* constantBuffer = nullptr;
 	// CB size is required to be 256-byte aligned.
@@ -417,7 +417,7 @@ ID3D12Resource* LightIndexedDeferredShading::CreateConstantBuffer(size_t size)
 	return constantBuffer;
 }
 
-void LightIndexedDeferredShading::GeneratePointLights(const Vector3D& start, const Vector3D& end, const Vector2D& RadiusRange)
+void LightIndexedDeferredRendering::GeneratePointLights(const Vector3D& start, const Vector3D& end, const Vector2D& RadiusRange)
 {
 	srand(static_cast<uint>(time(nullptr)));
 	auto& lights = m_lightingData.lights;
@@ -465,7 +465,7 @@ void LightIndexedDeferredShading::GeneratePointLights(const Vector3D& start, con
 	}
 }
 
-void LightIndexedDeferredShading::InitLightCullingData(LightCullingData& lightCullingData)
+void LightIndexedDeferredRendering::InitLightCullingData(LightCullingData& lightCullingData)
 {
 	uint instanceLightSize = sizeof(LightInstanceData) * numLights;
 	ThrowIfFailed(m_device->CreateCommittedResource(
@@ -552,7 +552,7 @@ void LightIndexedDeferredShading::InitLightCullingData(LightCullingData& lightCu
 	m_GPUDescriptor.ptr += descriptorSize;
 }
 
-void LightIndexedDeferredShading::InitGPULightCullng()
+void LightIndexedDeferredRendering::InitGPULightCullng()
 {
 	ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_computeCommandAllocator)));
 	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_computeCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_lightingData.computeCommandList)));
@@ -685,7 +685,7 @@ void LightIndexedDeferredShading::InitGPULightCullng()
 	m_lightingData.copyEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 }
 
-void LightIndexedDeferredShading::InitLightingSystem()
+void LightIndexedDeferredRendering::InitLightingSystem()
 {
 	UINT descriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -889,7 +889,7 @@ void LightIndexedDeferredShading::InitLightingSystem()
 }
 
 // Load the rendering pipeline dependencies.
-void LightIndexedDeferredShading::LoadPipeline()
+void LightIndexedDeferredRendering::LoadPipeline()
 {
     UINT dxgiFactoryFlags = 0;
 
@@ -1043,7 +1043,7 @@ void LightIndexedDeferredShading::LoadPipeline()
 }
 
 // Load the sample assets.
-void LightIndexedDeferredShading::LoadAssets()
+void LightIndexedDeferredRendering::LoadAssets()
 {
 	m_srv_cbv_uav_descriptor = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
 	m_GPUDescriptor = m_srvHeap->GetGPUDescriptorHandleForHeapStart();
@@ -1295,7 +1295,7 @@ void LightIndexedDeferredShading::LoadAssets()
 }
 
 // Generate a simple black and white checkerboard texture.
-std::vector<UINT8> LightIndexedDeferredShading::GenerateTextureData()
+std::vector<UINT8> LightIndexedDeferredRendering::GenerateTextureData()
 {
     const UINT rowPitch = TextureWidth * TexturePixelSize;
     const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
@@ -1331,7 +1331,7 @@ std::vector<UINT8> LightIndexedDeferredShading::GenerateTextureData()
     return data;
 }
 
-void LightIndexedDeferredShading::CullLights(LightCullingData& lightCullingData, float R)
+void LightIndexedDeferredRendering::CullLights(LightCullingData& lightCullingData, float R)
 {
 	CullingLightInfo instanceGPUCullData[numLights];
 
@@ -1425,7 +1425,7 @@ void LightIndexedDeferredShading::CullLights(LightCullingData& lightCullingData,
 }
 
 // Update frame-based values.
-void LightIndexedDeferredShading::OnUpdate()
+void LightIndexedDeferredRendering::OnUpdate()
 {
 	POINT pt;
 	GetCursorPos(&pt);
@@ -1501,7 +1501,7 @@ void LightIndexedDeferredShading::OnUpdate()
 }
 
 // Render the scene.
-void LightIndexedDeferredShading::OnRender()
+void LightIndexedDeferredRendering::OnRender()
 {
     // Record all the commands we need to render the scene into the command list.
     PopulateCommandList();
@@ -1516,7 +1516,7 @@ void LightIndexedDeferredShading::OnRender()
     WaitForPreviousFrame();
 }
 
-void LightIndexedDeferredShading::OnDestroy()
+void LightIndexedDeferredRendering::OnDestroy()
 {
     // Ensure that the GPU is no longer referencing resources that are about to be
     // cleaned up by the destructor.
@@ -1525,7 +1525,7 @@ void LightIndexedDeferredShading::OnDestroy()
     CloseHandle(m_fenceEvent);
 }
 
-void LightIndexedDeferredShading::drawToLightBuffer()
+void LightIndexedDeferredRendering::drawToLightBuffer()
 {
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
@@ -1635,7 +1635,7 @@ void LightIndexedDeferredShading::drawToLightBuffer()
 	WaitForPreviousFrame();
 }
 
-void LightIndexedDeferredShading::drawLightsSources()
+void LightIndexedDeferredRendering::drawLightsSources()
 {
 	ID3D12GraphicsCommandList* cmdList = m_commandList.Get();
 	cmdList->SetGraphicsRootSignature(m_lightingData.lightBufferRootSignature.Get());
@@ -1683,7 +1683,7 @@ void LightIndexedDeferredShading::drawLightsSources()
 #endif
 }
 
-void LightIndexedDeferredShading::PopulateCommandList()
+void LightIndexedDeferredRendering::PopulateCommandList()
 {
     // Command list allocators can only be reset when the associated 
     // command lists have finished execution on the GPU; apps should use 
@@ -1750,7 +1750,7 @@ void LightIndexedDeferredShading::PopulateCommandList()
     ThrowIfFailed(m_commandList->Close());
 }
 
-void LightIndexedDeferredShading::WaitForPreviousFrame()
+void LightIndexedDeferredRendering::WaitForPreviousFrame()
 {
     // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
     // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
@@ -1772,7 +1772,7 @@ void LightIndexedDeferredShading::WaitForPreviousFrame()
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-void LightIndexedDeferredShading::OnKeyDown(UINT8 key)
+void LightIndexedDeferredRendering::OnKeyDown(UINT8 key)
 {
 #define DIK_W               0x11
 #define DIK_A               0x1E

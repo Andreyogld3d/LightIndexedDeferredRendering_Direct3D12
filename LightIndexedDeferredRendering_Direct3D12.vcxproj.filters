@@ -48,7 +48,9 @@
     <ClInclude Include="Timer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="LightIndexedDeferredRendering.h" />
+    <ClInclude Include="LightIndexedDeferredRendering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -69,6 +71,8 @@
     <ClCompile Include="Timer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LightIndexedDeferredRendering.cpp" />
+    <ClCompile Include="LightIndexedDeferredRendering.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

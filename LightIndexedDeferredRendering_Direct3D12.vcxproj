@@ -113,6 +113,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Frustum.h" />
+    <ClInclude Include="LightIndexedDeferredRendering.h" />
     <ClInclude Include="Matrix4x4.h" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="Quaternion.h" />
@@ -121,7 +122,6 @@
     <ClInclude Include="Vector3D.h" />
     <ClInclude Include="Vector4D.h" />
     <ClInclude Include="Win32Application.h" />
-    <ClInclude Include="LightIndexedDeferredRendering.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DXSample.h" />
     <ClInclude Include="DXSampleHelper.h" />

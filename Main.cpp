@@ -10,11 +10,11 @@
 //*********************************************************
 
 #include "stdafx.h"
-#include "LightIndexedDeferredShading.h"
+#include "LightIndexedDeferredRendering.h"
 
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
-	LightIndexedDeferredShading sample(1280, 1024, L"Light Indexed Deferred Lighting");
+	LightIndexedDeferredRendering sample(1280, 1024, L"Light Indexed Deferred Lighting");
     return Win32Application::Run(&sample, hInstance, nCmdShow);
 }
