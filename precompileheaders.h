@@ -6,7 +6,7 @@
 #ifndef __PRECOMPILEHEADERS_H__
 #define __PRECOMPILEHEADERS_H__
 
-#include <windows.h>
+#include "Platform.h"
 
 #define LogMsg(...)
 

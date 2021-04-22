@@ -112,6 +112,7 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="Frustum.h" />
     <ClInclude Include="LightIndexedDeferredRendering.h" />
     <ClInclude Include="Matrix4x4.h" />

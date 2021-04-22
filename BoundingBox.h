@@ -2,6 +2,7 @@
 #define __BOUNDINGBOX_H__
 
 #include "Vector3D.h"
+#include <cstdint>
 #include <cfloat>
 
 class BoundingBox {
@@ -25,6 +26,29 @@ public:
 	};
 	Vector3D minPoint;
 	Vector3D maxPoint;
+	//
+	static void GetVertexIndices(uint16_t* indices)
+	{
+		//		5----6
+		//	  / |	/|
+		//	 /	|  / |
+		//	/	| /  |
+		//	1--4- 2  |
+		//	|   / |  7
+		//	| /   | /
+		//	0---- 3
+		const uint16_t Indices[] = {
+			0, 1, 2, 2, 3, 0,	// front
+			4, 5, 1, 1, 0, 4,	// left
+			7, 6, 5, 5, 4, 7,	// back
+			3, 2, 6, 6, 7, 3,	// right
+			1, 5, 6, 6, 2, 1,	// top
+			3, 7, 4, 4, 0, 3,	// bottom
+		};
+		assert(indices && "NULL Pointer");
+		memcpy(indices, Indices, sizeof(Indices));
+	}
+	//
 	INLINE BoundingBox(const Vector3D& minP, const Vector3D& maxP)
 	{
 		minPoint = minP;
@@ -168,6 +192,7 @@ public:
 		assert(index < 8 && "Out Of Range");
 		return Vector3D::Zero();
 	}
+	//
 	void GetPoints(Vector3D* outPoints) const
 	{
 		const Vector3D points[] = {minPoint,
@@ -180,7 +205,7 @@ public:
 									Vector3D(maxPoint.x, minPoint.y, maxPoint.z)
 		};
 		assert(outPoints && "NULL Pointer");
-		memcpy(outPoints, points, sizeof(points));
+		memcpy(reinterpret_cast<void *>(outPoints), points, sizeof(points));
 	}
 	//
 	BoundingBox Union(const BoundingBox& box) const
@@ -241,7 +266,7 @@ public:
 	{
 		return maxPoint >= minPoint;
 	}
-	// содерхание Bounding Box'а в Bounding Box'е
+	//
 	INLINE bool Contains(const BoundingBox& aabb) const
 	{
 		assert(IsValid() && "Invalid BoundingBox");
@@ -250,10 +275,10 @@ public:
 		return maxPoint.x >= maxP.x && maxPoint.y >= maxP.y && maxPoint.z >= maxP.z &&
 			minPoint.x <= minP.x && minPoint.y <= minP.y && minPoint.z <= minP.z;
 	}
-	// содерхание точки в Bounding Box'е
+	//
 	INLINE bool Contains(float x, float z) const
 	{
-		// проверить нахождение точки в границах
+		//
 		if (x < minPoint.x) {
 			return false;
 		}
@@ -268,10 +293,10 @@ public:
 		}
 		return true;
 	}
-	// содерхание точки в Bounding Box'е
+	//
 	INLINE bool Contains(float x, float y, float z) const
 	{
-		// проверить нахождение точки в границах
+		//
 		if (x < minPoint.x) {
 			return false;
 		}
@@ -292,17 +317,17 @@ public:
 		}
 		return true;
 	}
-	// содерхание точки в Bounding Box'е
+	//
 	INLINE bool Contains(const Vector3D& p) const
 	{
 		return Contains(p.x, p.y, p.z);
 	}
-	// возврат минимальной точки
+	//
 	INLINE const Vector3D& GetMinPoint() const
 	{
 		return minPoint;
 	}
-	// возврат максимальной точки
+	//
 	INLINE const Vector3D& GetMaxPoint() const
 	{
 		return maxPoint;
@@ -313,10 +338,10 @@ public:
 		AddVertex(box.GetMinPoint());
 		AddVertex(box.GetMaxPoint());
 	}
-	// добавление вершины
+	//
 	void AddVertex(float x, float y, float z)
 	{
-		// проверка границ
+		//
 		if (minPoint.x > x) {
 			minPoint.x = x;
 		}
@@ -337,7 +362,7 @@ public:
 			maxPoint.z = z;
 		}
 	}
-	// добавление вершины
+	//
 	void AddVertex(const float* vertex)
 	{
 		assert(vertex && "NULL Pointer");
@@ -359,12 +384,12 @@ public:
 	{
 		Add(box);
 	}
-	// Установка новой минимальной точки
+	//
 	INLINE void SetMinPoint(const Vector3D& newPoint)
 	{
 		minPoint = newPoint;
 	}
-	// Установка новой минимальной точки
+	//
 	INLINE void SetMaxPoint(const Vector3D& newPoint)
 	{
 		maxPoint = newPoint;
@@ -373,7 +398,7 @@ public:
 	{
 		return (maxPoint + minPoint) * 0.5f;
 	}
-	// Инициалиация AABB
+	//
 	INLINE void InitBoundingBox(const Vector3D& MinPoint, const Vector3D& MaxPoint)
 	{
 		assert(MinPoint.x <= MaxPoint.x && "Invalid Value");

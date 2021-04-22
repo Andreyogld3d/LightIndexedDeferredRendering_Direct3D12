@@ -38,7 +38,7 @@ void Timer::Init()
 	}
 	//
 	rfreq = 1.0f / Frequency.QuadPart;
-		LogMsg(" Timer init completed.\n");
+	LogMsg(" Timer init completed.\n");
 #endif
 }
 

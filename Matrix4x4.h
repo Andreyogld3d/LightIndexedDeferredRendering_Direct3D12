@@ -390,11 +390,11 @@ private:
 	INLINE Matrix4x4 InvertRotTrans(const Matrix4x4& M)
 	{
 		return Matrix4x4(
-			// 
+			// Transpoze rotating
 			M[0], M[4], M[8], 0.0f,
 			M[1], M[5], M[9], 0.0f,
 			M[2], M[6], M[10], 0.0f,
-			// 
+			// Translation - minus moving's and rotatin's point 
 			-(M[12]*M[0]) - (M[13]*M[1]) - (M[14]*M[2]),
 			-(M[12]*M[4]) - (M[13]*M[5]) - (M[14]*M[6]),
 			-(M[12]*M[8]) - (M[13]*M[9]) - (M[14]*M[10]),

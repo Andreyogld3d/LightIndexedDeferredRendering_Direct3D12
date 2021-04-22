@@ -383,7 +383,8 @@ void LightIndexedDeferredRendering::InitCamera()
 #else
 	PerspectiveMatrix(m, camera.GetFov(), camera.GetAspect(), camera.GetzNear(), camera.GetzFar());
 #endif
-	camera.SetPosition(Vector3D(0.0f, 10.0f, 0.0f));
+	camera.SetPosition(Vector3D(0.0f, 200.0f, 0.0f));
+	camera.EnableFly(true);
 }
 
 void LightIndexedDeferredRendering::OnInit()
@@ -548,7 +549,7 @@ void LightIndexedDeferredRendering::InitLightCullingData(LightCullingData& light
 	m_srv_cbv_uav_descriptor.ptr += descriptorSize;
 
 	lightCullingData.lightCullingDescriptors[3] = m_GPUDescriptor; // CB
-	lightCullingData.lightCullingConstantBuffer = CreateConstantBuffer(sizeof(Frustum));
+	lightCullingData.lightCullingConstantBuffer.Attach(CreateConstantBuffer(sizeof(Frustum)));
 	m_GPUDescriptor.ptr += descriptorSize;
 }
 
@@ -719,7 +720,7 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	m_device->CreateRenderTargetView(m_lightingData.lightBufferRT.Get(), nullptr, m_lightingData.lBRTVHandle);
 	m_rtvHandle.Offset(1, m_rtvDescriptorSize);
 
-	m_lightingData.lightBufferConstantBuffer = CreateConstantBuffer(255 * sizeof(Light));
+	m_lightingData.lightBufferConstantBuffer.Attach(CreateConstantBuffer(255 * sizeof(Light)));
 	m_lightingData.lightBufferDescriptor = m_GPUDescriptor;
 	m_GPUDescriptor.ptr += descriptorSize;
 
@@ -869,8 +870,8 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 		m_lightingData.lightIndices[i] = lightUintIndex;
 		i++;
 
-		m_lightingData.lBufferCBVS[lightIndex] = CreateConstantBuffer(sizeof(Matrix4x4) + sizeof(Vector4D));
-		m_lightingData.lBufferCBPS[lightIndex] = CreateConstantBuffer(sizeof(Vector4D));
+		m_lightingData.lBufferCBVS[lightIndex].Attach(CreateConstantBuffer(sizeof(Matrix4x4) + sizeof(Vector4D)));
+		m_lightingData.lBufferCBPS[lightIndex].Attach(CreateConstantBuffer(sizeof(Vector4D)));
 
 		m_lightingData.lBufferCBVSDescriptors[lightIndex] = m_GPUDescriptor;
 		m_GPUDescriptor.ptr += descriptorSize;
@@ -878,7 +879,7 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 		m_lightingData.lBufferCBPSDescriptors[lightIndex] = m_GPUDescriptor;
 		m_GPUDescriptor.ptr += descriptorSize;
 
-		m_lightingData.lSourceBufferCBVS[lightIndex] = CreateConstantBuffer(sizeof(Matrix4x4) + sizeof(Vector4D));
+		m_lightingData.lSourceBufferCBVS[lightIndex].Attach(CreateConstantBuffer(sizeof(Matrix4x4) + sizeof(Vector4D)));
 		m_lightingData.lSourceCBVSDescriptors[lightIndex] = m_GPUDescriptor;
 		m_GPUDescriptor.ptr += descriptorSize;
 	}
@@ -1061,7 +1062,7 @@ void LightIndexedDeferredRendering::LoadAssets()
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
         }
 
-		m_constantBuffer = CreateConstantBuffer(256);
+		m_constantBuffer.Attach(CreateConstantBuffer(256));
 		m_cBDescriptor = m_GPUDescriptor;
 		m_GPUDescriptor.ptr += descriptorSize;
 
@@ -1104,7 +1105,6 @@ void LightIndexedDeferredRendering::LoadAssets()
 			sampler, sampler2
 		};
 		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, _countof(samplers), samplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-//		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
@@ -1123,14 +1123,10 @@ void LightIndexedDeferredRendering::LoadAssets()
         ComPtr<ID3DBlob> pixelShader;
 
 		ID3DBlob* ppErrorMsgs = nullptr;
-#if 1
 		const wchar_t* psShaderFileName = L"shadowReceiverPS.hlsl";
 		const wchar_t* vsShaderFileName = L"shadowReceiverVS.hlsl";
-#else
-		const wchar_t* psShaderFileName = L"shaders.hlsl";
-		const wchar_t* vsShaderFileName = L"shaders.hlsl";
-#endif
-        HRESULT hr = D3DCompileFromFile(GetAssetFullPath(vsShaderFileName).c_str(), nullptr, nullptr, "VSmain", "vs_5_0", compileFlags, 0, &vertexShader, &ppErrorMsgs);
+
+		HRESULT hr = D3DCompileFromFile(GetAssetFullPath(vsShaderFileName).c_str(), nullptr, nullptr, "VSmain", "vs_5_0", compileFlags, 0, &vertexShader, &ppErrorMsgs);
 		outError(ppErrorMsgs);
 		hr = D3DCompileFromFile(GetAssetFullPath(psShaderFileName).c_str(), nullptr, nullptr, "psMain", "ps_5_0", compileFlags, 0, &pixelShader, &ppErrorMsgs);
 		outError(ppErrorMsgs);
@@ -1165,14 +1161,8 @@ void LightIndexedDeferredRendering::LoadAssets()
         psoDesc.SampleDesc.Count = 1;
         ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 
-		//ComPtr<ID3DBlob> depthVertexShader;
-
-		//hr = D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), macros, nullptr, "VSMainDepth", "vs_5_0", compileFlags, 0, &depthVertexShader, &ppErrorMsgs);
-		//outError(ppErrorMsgs);
-
 		psoDesc.pRootSignature = m_depthRootSignature.Get();
 		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		//psoDesc.VS = CD3DX12_SHADER_BYTECODE(depthVertexShader.Get());
 		psoDesc.PS = CD3DX12_SHADER_BYTECODE();
 		psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = 0;
 		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_depthPipelineState)));
@@ -1699,7 +1689,6 @@ void LightIndexedDeferredRendering::PopulateCommandList()
 
 
     // Set necessary state.
-
 	ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
@@ -1746,7 +1735,6 @@ void LightIndexedDeferredRendering::PopulateCommandList()
 	barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition(m_lightingData.lightCullingData.lightCullingIndirectBuffer.Get(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 #endif
 	m_commandList->ResourceBarrier(static_cast<UINT>(barriers.size()), barriers.data());
-
     ThrowIfFailed(m_commandList->Close());
 }
 

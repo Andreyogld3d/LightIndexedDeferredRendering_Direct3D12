@@ -3,8 +3,9 @@
 
 #ifdef _WIN32
 
-#undef WINVER
+#ifndef WINVER
 #define WINVER 0x0601
+#endif
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -25,7 +26,7 @@
 #endif
 
 #ifndef _WIN32_WINNT			// Specifies that the minimum required platform is Windows Vista.
-#define _WIN32_WINNT 0x0600	 // Change this to the appropriate value to target other versions of Windows.
+#define _WIN32_WINNT WINVER	 // Change this to the appropriate value to target other versions of Windows.
 #endif
 
 #ifndef _WIN32_WINDOWS		  // Specifies that the minimum required platform is Windows 98.
@@ -123,6 +124,7 @@ struct WNDCLASS;
 #ifdef USE_X11
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <xcb/xcb.h>
 #else
 typedef void* Window;
 struct Display;
@@ -135,6 +137,17 @@ struct Display;
 
 #include "types.h"
 
+#if defined(__GNUC__) || defined(__clang__)
+
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif // stricmp
+#ifndef strnicmp
+#define strnicmp strncasecmp
+#endif // strnicmp
+
+#endif // defined(__GNUC__) || defined(__clang__)
+
 #ifndef INLINE
 #define INLINE inline
 #endif
@@ -142,6 +155,14 @@ struct Display;
 #ifndef MAKEFOURCC
 	#define MAKEFOURCC(ch0, ch1, ch2, ch3)\
 		(uint(uchar(ch0)) | (uint(uchar(ch1)) << 8) | (uint(uchar(ch2)) << 16) | (uint(uchar(ch3)) << 24))
+#endif
+
+#ifndef UNUSED
+#define UNUSED(x) (void)x
+#endif
+
+#ifndef DLL_EXPORT
+#define DLL_EXPORT
 #endif
 
 #endif // __PLATFORM_H__

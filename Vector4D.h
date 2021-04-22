@@ -222,7 +222,7 @@ public:
 	{
 		return (x != v.x || y != v.y || z != v.z || w != v.w);
 	}
-	// Для доступа к компонентам вектора по индексу
+	//
 	INLINE float& operator [](int index)
 	{
 		assert(index < 4 && "Out of Range");
@@ -302,7 +302,7 @@ public:
 	{
 		return x * x + y * y + z * z;
 	}
-	// Нормализация
+	//
 	INLINE Vector4D& Normalize()
 	{
 		float l = Length();

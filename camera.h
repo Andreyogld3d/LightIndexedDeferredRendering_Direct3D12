@@ -25,6 +25,12 @@ private:
 #ifndef USE_QUATERNIONS
 	static Matrix4x4 Mat;
 #endif
+	// old flags
+	uint flags;
+	// Changing camera flags
+	uint changeCameraFlag;
+	//
+	BoundingBox bbox;
 	// camera speed
 	float Speed;
 	// width / height
@@ -55,11 +61,44 @@ private:
 	Vector3D Position;
 	// old camera position
 	Vector3D oldPos;
+#ifdef ORBITAL_CAMERA
+	// orientation
+	Quaternion orientation;
+	//
+	Vector2D orbitAngles;
+	//
+	float accumPitchDegrees;
+	//
+	float orbitOffsetDistance;
+	//
+	Vector3D Target;
+	//
+	uint cameraType;
+#endif
+	// is move enabled
+	uint isMove;
+	// is rotate enabled
+	uint isRotate;
 
+	// if Free camera moving
+	uint Fly;
+	// move Type
+	uchar lastMoveType;
+
+	bool CheckOrbitalLimitRotation(float& y, bool checkAngle);
 	//
 	void ResetDefaultVectors();
 	//
+	void CalcBoundingBox();
+	//
 	void UpdateViewMatrix(float sign = 1.0f);
+	//
+	void ForceChangeOrbitDistance();
+	//
+	uint IsChangedOrbitDistance() const
+	{
+		return changeCameraFlag & CHANGE_ORBIT_DISTANCE;
+	}
 public:
  enum {
 		MOVE_LEFT,	// moving to left
@@ -78,6 +117,94 @@ public:
 		SCROLL_UP,
 		SCROLL_DOWN,
 	};
+	enum CameraFlags {
+		CHANGE_ORIENTATION = 0x00000001,
+		CHANGE_POSITION = 0x00000010,
+		CHANGE_ORBIT_DISTANCE = 1 << 3
+	};
+	INLINE int GetLastMoveType() const
+	{
+		return lastMoveType;
+	}
+	// change flag camera postion
+	INLINE void ForceChangeCameraPosition()
+	{
+		changeCameraFlag |= CHANGE_POSITION;
+	}
+	// change flag camera
+	INLINE void ForceChangeCamera()
+	{
+		changeCameraFlag |= CHANGE_ORIENTATION;
+		ForceChangeCameraPosition();
+	}
+	//
+	INLINE BitsBool IsChangeCamera() const
+	{
+		return IsChangeOrientation() | IsChangePosition();
+	}
+	//
+	INLINE BitsBool IsChangePosition() const
+	{
+		return IsBitsSet(changeCameraFlag, CHANGE_POSITION);
+	}
+	//
+	INLINE BitsBool IsChangeOrientation() const
+	{
+		return IsBitsSet(changeCameraFlag, CHANGE_ORIENTATION);
+	}
+	//
+	INLINE void ClearChangeCamera()
+	{
+		changeCameraFlag = 0;
+	}
+	INLINE void ClearLastMoveType()
+	{
+		lastMoveType = STOP;
+	}
+	//
+	INLINE uint GetFly() const
+	{
+		return Fly;
+	}
+	//
+	INLINE bool EnableFly(uint flag)
+	{
+		Fly = flag;
+		return true;
+	}
+	//
+	INLINE bool EnableMove(uint flag)
+	{
+		isMove = flag;
+		return true;
+	}
+	//
+	INLINE bool EnableRotate(uint flag)
+	{
+		isRotate = flag;
+		return true;
+	}
+	INLINE bool Lock(uint flag)
+	{
+		isRotate = !flag;
+		isMove = !flag;
+		return true;
+	}
+	INLINE bool IsLock() const
+	{
+		return !isRotate && !isMove;
+	}
+	//
+	INLINE void SetOldPos()
+	{
+		Position = oldPos;
+		CalcBoundingBox();
+	}
+	//
+	INLINE const BoundingBox& GetBoundingBox() const
+	{
+		return bbox;
+	}
 	//
 	INLINE Frustum& GetFrustum()
 	{
@@ -171,6 +298,7 @@ public:
 		Position.x = x;
 		Position.y = CameraHeight + y;
 		Position.z = z;
+		ForceChangeCameraPosition();
 		return true;
 	}
 	//
@@ -184,6 +312,7 @@ public:
 		Direction.x = x;
 		Direction.y = y;
 		Direction.z = z;
+		ForceChangeCamera();
 	}
 	//
 	INLINE void SetUp(const Vector3D& vec)
@@ -295,12 +424,24 @@ public:
 	{
 		Matrix = matrix;
 	}
+	// Save Flags
+	INLINE void SaveFlags()
+	{
+		flags = changeCameraFlag;
+	}
+	// Restore Flags
+	INLINE void RestoreFlags()
+	{
+		changeCameraFlag = flags;
+	}
 	//
 	bool SetSpeed(float speed);
 	//
 	bool SetCameraHeight(float height);
 	//
 	void Move(int KEY, float speed);
+	//
+	void Scroll(int key, float speed);
 	// Set Aspect
 	void SetAspect(float Aspect);
 	//
@@ -310,18 +451,61 @@ public:
 	{
 		frustum.ExtractFrustum(proj, Matrix);
 	}
+	INLINE void ExtractFrustum(const Matrix4x4& viewProj)
+	{
+		frustum.ExtractFrustum(viewProj);
+	}
 	// CalculateFrustum
 	INLINE void CalculateNearFarPlanes()
 	{
 		frustum.CalculateNearFarPlanes(proj, Matrix);
 	}
 	//
+#ifdef ORBITAL_CAMERA
+	//
+	float GetPitchAngle() const
+	{
+		return accumPitchDegrees;
+	}
+	//
+	const Vector2D& GetPitchLimitAngles() const
+	{
+		return orbitAngles;
+	}
+	//
+	const Quaternion& GetOrientation() const
+	{
+		return orientation;
+	}
+	//
+	float GetOrbitDistance() const
+	{
+		return orbitOffsetDistance;
+	}
+	//
+	void SetOrbitDistance(float value)
+	{
+		assert(value > 0.0f && "Invalid Value");
+		if (orbitOffsetDistance != value) {
+			orbitOffsetDistance = value;
+			ForceChangeCamera();
+		}
+	}
+#endif
+	//
+	void SetName(const char* Name);
+	//
 	void SetTarget(const Vector3D& target);
 	//
 	void ClearRotate();
 	//
-	void UpdateCamera(float sign = 1.0f);
+	bool UpdateCamera(float sign = 1.0f);
 	//
+	void SetCameraType(uint type);
+	// Reflect camera by given plane
+	void Reflect(const Plane& plane, bool calcFrustum = false);
+	// Reflect camera by given plane
+	void Reflect(const Camera& camera, Plane& plane, bool calcFrustum = false);
 	Camera();
 };
 

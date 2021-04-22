@@ -58,6 +58,7 @@ private:
 		}
 		uint64 CalcDeltaTimeInt(uint64& start)
 		{
+			UNUSED(start);
 #ifdef _WIN32
 			LARGE_INTEGER temp;
 			// Get counter

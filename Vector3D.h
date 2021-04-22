@@ -318,7 +318,7 @@ INLINE void CopyVector(Vector3D* outVector, const Vector3D* inVector)
 {
 	assert(outVector && "NULL Pointer");
 	assert(inVector && "NULL Pointer");
-	memcpy(outVector, inVector, sizeof(Vector3D));
+	memcpy(reinterpret_cast<void *>(outVector), inVector, sizeof(Vector3D));
 }
 
 INLINE void CopyVector(Vector3D& outVector, const Vector3D& inVector)
