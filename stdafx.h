@@ -33,3 +33,23 @@
 #include <cstdlib>
 #include <wrl.h>
 #include <shellapi.h>
+
+#define countof _countof
+
+static void log(const char* Message...)
+{
+	char buf[16384];
+	va_list	argumentPtr;
+	va_start(argumentPtr, Message);
+	vsnprintf(buf, countof(buf), Message, argumentPtr);
+	va_end(argumentPtr);
+#ifdef _WIN32
+	OutputDebugStringA(buf);
+#endif
+	fprintf(stderr, "%s", buf);
+}
+
+#define LogMsg(...) log(__VA_ARGS__)
+#define LogMsgErr(...) log(__VA_ARGS__)
+#define LogMsgNoTime(...) log(__VA_ARGS__)
+
