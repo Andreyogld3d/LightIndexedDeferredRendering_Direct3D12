@@ -60,7 +60,11 @@ float4 CalculateLighting(float4 Color, float3 worldPos, float3 Normal, float3 vi
 // NO_LIGHT_BUFFER standart Forward lighting 
 //#define NO_LIGHT_BUFFER 
 #define ORDER_LIGHT_FIX
+#ifndef NO_LIGHT_BUFFER
     for (int i = 0; i < 4; ++i)
+#else
+    for (int i = 0; i < 255; ++i)
+#endif
     {                   
 #ifndef NO_LIGHT_BUFFER
 #ifdef ORDER_LIGHT_FIX
