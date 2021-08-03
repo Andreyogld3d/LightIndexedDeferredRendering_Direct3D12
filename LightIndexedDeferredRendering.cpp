@@ -60,6 +60,16 @@ namespace {
 	float emulationTime = 0.1f;
 
 	static const uint numLights = LightIndexedDeferredRendering::maxLights;
+
+	uint ABGR(float r, float g, float b, float a)
+	{
+		uint dwR = r >= 1.0f ? 0xff : r <= 0.0f ? 0x00 : static_cast<uint>(r * 255.0f + 0.5f);
+		uint dwG = g >= 1.0f ? 0xff : g <= 0.0f ? 0x00 : static_cast<uint>(g * 255.0f + 0.5f);
+		uint dwB = b >= 1.0f ? 0xff : b <= 0.0f ? 0x00 : static_cast<uint>(b * 255.0f + 0.5f);
+		uint dwA = a >= 1.0f ? 0xff : a <= 0.0f ? 0x00 : static_cast<uint>(a * 255.0f + 0.5f);
+
+		return (dwR << 24) | (dwG << 16) | (dwB << 8) | dwA;
+	}
 	
 	void outError(ID3DBlob* ppErrorMsgs)
 	{
@@ -431,12 +441,12 @@ void LightIndexedDeferredRendering::GeneratePointLights(const Vector3D& start, c
 	lights[0] = { {2, 10, 0 }, 20, { 0.0, 0.0, 1.0 }, Light::Point };
 	lights[1] = { {0, 10, 0 }, 20, { 0.0, 1.0, 0.0 }, Light::Point };
 	lights[2] = { {-10, 10, 5 }, 120, { 1.0, 0.0, 0.0 }, Light::Point };
-	for (int i = 0; i < numLights; ++i) {
+	for (size_t i = 0; i < countof(lightsList); ++i) {
 		Light& light = lights[i];
 		light = lightsList[i];
 	}
 #else
-	for (int i = 0; i < numLights; ++i) {
+	for (uint i = 0; i < m_lightingData.numLights; ++i) {
 		Light& light = lights[i];
 		light.Type = Light::Point;
 		light.Range = Rand(RadiusRange.x, RadiusRange.y);
@@ -452,7 +462,7 @@ void LightIndexedDeferredRendering::GeneratePointLights(const Vector3D& start, c
 	const Vector3D off(5.0f, 5.0f, 0.0f);
 	const Vector3D Xdir = off;
 	const Vector3D Zdir = -off;
-	for (size_t i = 0; i < numLights; ++i) {
+	for (uint i = 0; i < m_lightingData.numLights; ++i) {
 		Light& light = lights[i];
 		m_lightingData.lightsRanges[i] = light.Range;
 		if (i % 2) {
@@ -468,7 +478,7 @@ void LightIndexedDeferredRendering::GeneratePointLights(const Vector3D& start, c
 
 void LightIndexedDeferredRendering::InitLightCullingData(LightCullingData& lightCullingData)
 {
-	uint instanceLightSize = sizeof(LightInstanceData) * numLights;
+	uint instanceLightSize = sizeof(LightInstanceData) * m_lightingData.numLights;
 	ThrowIfFailed(m_device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
@@ -526,7 +536,7 @@ void LightIndexedDeferredRendering::InitLightCullingData(LightCullingData& light
 	ThrowIfFailed(m_device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(CullingLightInfo) * numLights),
+		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(CullingLightInfo) * m_lightingData.numLights),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&lightCullingData.lightCullingDataBuffer)));
@@ -847,12 +857,12 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_lightingData.lightBufferPipeline)));
 
-	const float minR = 20.0f;
-	const float maxR = 30.0f;
 	const float lCoords = 0.9f * coord;
+	const float minR = m_lightingData.radiuseRange.x;
+	const float maxR = m_lightingData.radiuseRange.y;
 	GeneratePointLights(Vector3D(-lCoords, minR, -lCoords), Vector3D(lCoords, maxR / 2, lCoords), Vector2D(minR, maxR));
 	uint i = 0;
-	for (int lightIndex = 255 - 1; lightIndex >= 0; --lightIndex) {
+	for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
 		Vector4D& OutColor = m_lightingData.lightVector4Indices[i];
 		// Set the light index color 
 		ubyte convertColor = static_cast<ubyte>(lightIndex + 1);
@@ -862,11 +872,11 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 		ubyte alphaBit = (convertColor & (0x3 << 6)) << 0;
 		OutColor = Vector4D(redBit, greenBit, blueBit, alphaBit);
 
-		OutColor = Vector4D(redBit, greenBit, blueBit, alphaBit);
 		const float divisor = 255.0f;
 		OutColor /= divisor;
 
 		uint lightUintIndex = OutColor.RGBA();
+		//uint lightUintIndex = ABGR(redBit / divisor, greenBit / divisor, blueBit / divisor, alphaBit / divisor);
 		m_lightingData.lightIndices[i] = lightUintIndex;
 		i++;
 
@@ -1033,6 +1043,20 @@ void LightIndexedDeferredRendering::LoadPipeline()
 // Load the sample assets.
 void LightIndexedDeferredRendering::LoadAssets()
 {
+	const float minR = 20.0f;
+	const float maxR = 30.0f;
+
+	m_lightingData.numLights = numLights;
+	m_lightingData.radiuseRange.x = minR;
+	m_lightingData.radiuseRange.y = maxR;
+	FILE* f = fopen("setup.cfg", "r");
+	if (f) {
+		int res = fscanf(f, "LightSourceRadiusRange %f %f\r\n", &m_lightingData.radiuseRange.x, &m_lightingData.radiuseRange.y);
+		assert(res > 0 && "fscanf failed");
+		//res = fscanf(f, "NumLightSources %u", &m_lightingData.numLights);
+		//assert(res > 0 && "fscanf failed");
+		fclose(f);
+	}
 	m_srv_cbv_uav_descriptor = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
 	m_GPUDescriptor = m_srvHeap->GetGPUDescriptorHandleForHeapStart();
 
@@ -1312,7 +1336,7 @@ void LightIndexedDeferredRendering::CullLights(LightCullingData& lightCullingDat
 {
 	CullingLightInfo instanceGPUCullData[numLights];
 
-	for (int lightIndex = numLights - 1; lightIndex >= 0; --lightIndex) {
+	for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
 		const Light& light = m_lightingData.lights[lightIndex];
 		CullingLightInfo& cullingLightInfo = instanceGPUCullData[lightIndex];
 		LightInstanceData& lightData = cullingLightInfo.instanceData;
@@ -1321,7 +1345,7 @@ void LightIndexedDeferredRendering::CullLights(LightCullingData& lightCullingDat
 		//lightData.lightIndex = Vector4D(light.color.x, light.color.y, light.color.z, 1.0f);
 		lightData.lightIndex = m_lightingData.lightVector4Indices[lightIndex];
 	}
-	UpdateBuffer(lightCullingData.lightCullingDataBuffer.Get(), instanceGPUCullData, sizeof(instanceGPUCullData));
+	UpdateBuffer(lightCullingData.lightCullingDataBuffer.Get(), instanceGPUCullData, m_lightingData.numLights * sizeof(CullingLightInfo));
 
 	const D3D12_DRAW_INDEXED_ARGUMENTS drawIndexedIndirectCommand = {
 		3 * m_lightingData.lightGeometryData.numFaces,
@@ -1383,7 +1407,7 @@ void LightIndexedDeferredRendering::CullLights(LightCullingData& lightCullingDat
 	m_lightingData.computeCommandList->SetComputeRootDescriptorTable(1, lightCullingData.lightCullingDescriptors[2]);
 	m_lightingData.computeCommandList->SetComputeRootDescriptorTable(2, lightCullingData.lightCullingDescriptors[3]);
 
-	m_lightingData.computeCommandList->Dispatch(numLights, 1, 1);
+	m_lightingData.computeCommandList->Dispatch(m_lightingData.numLights, 1, 1);
 
 	ThrowIfFailed(m_lightingData.computeCommandList->Close());
 
@@ -1458,7 +1482,7 @@ void LightIndexedDeferredRendering::OnUpdate()
 #endif
 	};
 
-	for (size_t lightIndex = 0; lightIndex < numLights; ++lightIndex) {
+	for (uint lightIndex = 0; lightIndex < m_lightingData.numLights; ++lightIndex) {
 		Light& light = m_lightingData.lights[lightIndex];
 		Vector4D& LightPos = m_lightingData.lightsPositions[lightIndex];
 		Vector3D& dirOffset = m_lightingData.dirPosOffsets[lightIndex];
@@ -1572,7 +1596,7 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 	cmdList->IASetVertexBuffers(0, static_cast<UINT>(std::size(pViews)), pViews);
 
 	//cmdList->IASetVertexBuffers(0, 1, &m_lightingData.lightGeometryData.vbView);
-	//for (int lightIndex = numLights - 1; lightIndex >= 0; --lightIndex) {
+	//for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
 	//	const Light& light = m_lightingData.lights[lightIndex];
 	//	const Vector4D& lightPosRange = m_lightingData.lightsPositions[lightIndex];
 	//	if (!camera.IsVisible(reinterpret_cast<const BoundingSphere &>(lightPosRange))) {
@@ -1584,7 +1608,7 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 
 #else
 	cmdList->IASetVertexBuffers(0, 1, &m_lightingData.lightGeometryData.vbView);
-	for (int lightIndex = numLights - 1; lightIndex >= 0; --lightIndex) {
+	for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
 		const Light& light = m_lightingData.lights[lightIndex];
 		const Vector4D& lightPosRange = m_lightingData.lightsPositions[lightIndex];
 		if (!camera.IsVisible(reinterpret_cast<const BoundingSphere &>(lightPosRange))) {
@@ -1633,7 +1657,7 @@ void LightIndexedDeferredRendering::drawLightsSources()
 	cmdList->ExecuteIndirect(m_lightingData.commandSignature.Get(), 1, m_lightingData.lightCullingDataDebug.lightCullingIndirectBuffer.Get(), 0, nullptr, 0);
 #else
 	cmdList->IASetVertexBuffers(0, 1, &m_lightingData.lightGeometryData.vbView);
-	for (int lightIndex = numLights - 1; lightIndex >= 0; --lightIndex) {
+	for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
 		const Light& light = m_lightingData.lights[lightIndex];
 		const Vector4D& lightPosRange = m_lightingData.lightsPositions[lightIndex];
 		if (!camera.IsVisible(reinterpret_cast<const BoundingSphere &>(lightPosRange))) {

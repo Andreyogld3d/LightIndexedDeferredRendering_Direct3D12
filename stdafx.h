@@ -34,6 +34,8 @@
 #include <wrl.h>
 #include <shellapi.h>
 
+#pragma warning(disable : 4996)
+
 #define countof _countof
 
 static void log(const char* Message...)

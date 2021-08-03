@@ -202,6 +202,10 @@ private:
 		lightVector4Indices_t lightVector4Indices;
 		//
 		MeshData lightGeometryData;
+		//
+		uint numLights;
+		//
+		Vector2D radiuseRange;
 	};
 	CbData cbData;
     // Pipeline objects.
