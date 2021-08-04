@@ -36,11 +36,13 @@ struct VS_OUTPUT {
 
 float4 GetLightIndexImpl(Texture2D BitPlane, SamplerState sBitPlane, float2 uv) {
 	float4 packedLight = tex2D(BitPlane, uv);
-	float4 unpackConst = float4(4.0, 16.0, 64.0, 256.0) / 256.0;
-	float4 floorValues = ceil(packedLight * 254.5);
+    // Set depending on the texture size
+	const float4 unpackConst = float4(4.0f, 16.0f, 64.0f, 256.0f) / 256.0f;
+    // Expand out to the 0..255 range (ceil to avoid precision errors)
+	float4 floorValues = ceil(packedLight * 254.5f);
 	float4 lightIndex;
 	for(int i = 0; i < 4; i++) {
-		packedLight = floorValues * 0.25;
+		packedLight = floorValues * 0.25f;
 		floorValues = floor(packedLight);
 		float4 fracParts = packedLight - floorValues;
 		lightIndex[i] = dot(fracParts, unpackConst);
@@ -59,7 +61,6 @@ float4 CalculateLighting(float4 Color, float3 worldPos, float3 Normal, float3 vi
     float3 v = normalize(viewDir);
 // NO_LIGHT_BUFFER standart Forward lighting 
 //#define NO_LIGHT_BUFFER 
-#define ORDER_LIGHT_FIX
 #ifndef NO_LIGHT_BUFFER
     for (int i = 0; i < 4; ++i)
 #else
@@ -67,14 +68,10 @@ float4 CalculateLighting(float4 Color, float3 worldPos, float3 Normal, float3 vi
 #endif
     {                   
 #ifndef NO_LIGHT_BUFFER
-#ifdef ORDER_LIGHT_FIX
-		float lIndex = ceil(NUM_LIGHTS - 256.0f * lightIndex[i]);
-#else
 		float lIndex = 255.0f * lightIndex[i];
-#endif
-		Light light = lights[int(lIndex)]; 
+		Light light = lights[lIndex];
 #else
-		Light light = lights[i]; 
+		Light light = lights[i];
 #endif
         float3 l = (light.posRange.xyz - worldPos) * light.posRange.w;
         float atten = saturate(1.0f - dot(l, l));

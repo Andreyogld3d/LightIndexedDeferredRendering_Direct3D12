@@ -61,16 +61,6 @@ namespace {
 
 	static const uint numLights = LightIndexedDeferredRendering::maxLights;
 
-	uint ABGR(float r, float g, float b, float a)
-	{
-		uint dwR = r >= 1.0f ? 0xff : r <= 0.0f ? 0x00 : static_cast<uint>(r * 255.0f + 0.5f);
-		uint dwG = g >= 1.0f ? 0xff : g <= 0.0f ? 0x00 : static_cast<uint>(g * 255.0f + 0.5f);
-		uint dwB = b >= 1.0f ? 0xff : b <= 0.0f ? 0x00 : static_cast<uint>(b * 255.0f + 0.5f);
-		uint dwA = a >= 1.0f ? 0xff : a <= 0.0f ? 0x00 : static_cast<uint>(a * 255.0f + 0.5f);
-
-		return (dwR << 24) | (dwG << 16) | (dwB << 8) | dwA;
-	}
-	
 	void outError(ID3DBlob* ppErrorMsgs)
 	{
 		if (!ppErrorMsgs) {
@@ -861,24 +851,19 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	const float minR = m_lightingData.radiuseRange.x;
 	const float maxR = m_lightingData.radiuseRange.y;
 	GeneratePointLights(Vector3D(-lCoords, minR, -lCoords), Vector3D(lCoords, maxR / 2, lCoords), Vector2D(minR, maxR));
-	uint i = 0;
+
 	for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
-		Vector4D& OutColor = m_lightingData.lightVector4Indices[i];
+		Vector4D& outColor = m_lightingData.lightVector4Indices[lightIndex];
 		// Set the light index color 
 		ubyte convertColor = static_cast<ubyte>(lightIndex + 1);
 		ubyte redBit = (convertColor & (0x3 << 0)) << 6;
 		ubyte greenBit = (convertColor & (0x3 << 2)) << 4;
 		ubyte blueBit = (convertColor & (0x3 << 4)) << 2;
 		ubyte alphaBit = (convertColor & (0x3 << 6)) << 0;
-		OutColor = Vector4D(redBit, greenBit, blueBit, alphaBit);
+		outColor = Vector4D(redBit, greenBit, blueBit, alphaBit);
 
 		const float divisor = 255.0f;
-		OutColor /= divisor;
-
-		uint lightUintIndex = OutColor.RGBA();
-		//uint lightUintIndex = ABGR(redBit / divisor, greenBit / divisor, blueBit / divisor, alphaBit / divisor);
-		m_lightingData.lightIndices[i] = lightUintIndex;
-		i++;
+		outColor /= divisor;
 
 		m_lightingData.lBufferCBVS[lightIndex].Attach(CreateConstantBuffer(sizeof(Matrix4x4) + sizeof(Vector4D)));
 		m_lightingData.lBufferCBPS[lightIndex].Attach(CreateConstantBuffer(sizeof(Vector4D)));

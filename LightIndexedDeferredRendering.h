@@ -197,8 +197,6 @@ private:
 		//
 		Vector3D_t dirPosOffsets;
 		//
-		lightIndices_t lightIndices;
-		//
 		lightVector4Indices_t lightVector4Indices;
 		//
 		MeshData lightGeometryData;
