@@ -1119,8 +1119,8 @@ void LightIndexedDeferredRendering::LoadAssets()
         ComPtr<ID3DBlob> pixelShader;
 
 		ID3DBlob* ppErrorMsgs = nullptr;
-		const wchar_t* psShaderFileName = L"shadowReceiverPS.hlsl";
-		const wchar_t* vsShaderFileName = L"shadowReceiverVS.hlsl";
+		const wchar_t* psShaderFileName = L"PixelShader.hlsl";
+		const wchar_t* vsShaderFileName = L"VertexShader.hlsl";
 
 		HRESULT hr = D3DCompileFromFile(GetAssetFullPath(vsShaderFileName).c_str(), nullptr, nullptr, "VSmain", "vs_5_0", compileFlags, 0, &vertexShader, &ppErrorMsgs);
 		outError(ppErrorMsgs);
