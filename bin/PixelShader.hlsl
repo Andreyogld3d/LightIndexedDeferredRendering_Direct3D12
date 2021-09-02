@@ -68,7 +68,7 @@ float4 CalculateLighting(float4 Color, float3 worldPos, float3 Normal, float3 vi
 #endif
     {                   
 #ifndef NO_LIGHT_BUFFER
-		float lIndex = 255.0f * lightIndex[i];
+		float lIndex = 256.0f * lightIndex[i]; //!!! Bug: original Demo 255
 		Light light = lights[lIndex];
 #else
 		Light light = lights[i];

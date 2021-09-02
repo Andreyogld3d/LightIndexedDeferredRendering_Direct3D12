@@ -855,7 +855,7 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
 		Vector4D& outColor = m_lightingData.lightVector4Indices[lightIndex];
 		// Set the light index color 
-		ubyte convertColor = static_cast<ubyte>(lightIndex + 1);
+		ubyte convertColor = static_cast<ubyte>(lightIndex);
 		ubyte redBit = (convertColor & (0x3 << 0)) << 6;
 		ubyte greenBit = (convertColor & (0x3 << 2)) << 4;
 		ubyte blueBit = (convertColor & (0x3 << 4)) << 2;
