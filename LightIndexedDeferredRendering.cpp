@@ -843,6 +843,8 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	RenderTarget.BlendEnable = TRUE;
 	RenderTarget.SrcBlend = D3D12_BLEND_ONE;
 	RenderTarget.DestBlend = D3D12_BLEND_BLEND_FACTOR;
+	RenderTarget.SrcBlendAlpha = D3D12_BLEND_ONE;
+	RenderTarget.DestBlendAlpha = D3D12_BLEND_BLEND_FACTOR;
 	psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
 	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_lightingData.lightBufferPipeline)));
