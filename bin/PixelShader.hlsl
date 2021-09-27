@@ -47,7 +47,7 @@ float4 GetLightIndexImpl(Texture2D BitPlane, SamplerState sBitPlane, float2 uv) 
 		float4 fracParts = packedLight - floorValues;
 		lightIndex[i] = dot(fracParts, unpackConst);
 	}
-	return lightIndex;
+	return 256.0f * lightIndex;//!!! Bug: original Demo 255
 }
 
 #define GetLightIndex(tex, uv) GetLightIndexImpl(tex, s##tex, uv)
@@ -68,8 +68,7 @@ float4 CalculateLighting(float4 Color, float3 worldPos, float3 Normal, float3 vi
 #endif
     {                   
 #ifndef NO_LIGHT_BUFFER
-		float lIndex = 256.0f * lightIndex[i]; //!!! Bug: original Demo 255
-		Light light = lights[lIndex];
+		Light light = lights[lightIndex[i]];
 #else
 		Light light = lights[i];
 #endif
