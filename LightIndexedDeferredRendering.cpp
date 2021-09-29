@@ -1566,7 +1566,7 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 	cmdList->IASetIndexBuffer(&m_lightingData.lightGeometryData.ibView);
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	const float blendconstants[] = {
-		0.25f, 0.25f, 0.25f, 0.25f
+		0.251f, 0.251f, 0.251f, 0.251f
 	};
 	cmdList->OMSetBlendFactor(blendconstants);
 	
