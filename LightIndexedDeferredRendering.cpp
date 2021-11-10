@@ -1518,7 +1518,7 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ID3D12GraphicsCommandList* cmdList = m_lightingData.rtCommandList.Get();
+	ID3D12GraphicsCommandList1* cmdList = m_lightingData.rtCommandList.Get();
 
 	ThrowIfFailed(cmdList->Reset(m_commandAllocator.Get(), nullptr));
 #ifdef GPU_CULLING
@@ -1581,6 +1581,7 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 		m_lightingData.lightCullingData.instanceVBView
 	};
 	cmdList->IASetVertexBuffers(0, static_cast<UINT>(std::size(pViews)), pViews);
+	cmdList->IASetVertexBuffers(0, static_cast<UINT>(std::size(pViews)), pViews);
 
 	//cmdList->IASetVertexBuffers(0, 1, &m_lightingData.lightGeometryData.vbView);
 	//for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
@@ -1594,6 +1595,32 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 	cmdList->ExecuteIndirect(m_lightingData.commandSignature.Get(), 1, m_lightingData.lightCullingData.lightCullingIndirectBuffer.Get(), 0, nullptr, 0);
 
 #else
+	auto CalculateDepthBounds = [](float& nearVal, float& farVal, float lightSize, const Matrix4x4& modelViewMatrix, const Matrix4x4& projectionMatrix, const Vector3D& lightPosition)
+	{
+		auto clamp = [](float v, float c0, float c1)
+		{
+			return min(max(v, c0), c1);
+		};
+
+		Vector4D diffVector = Vector4D(0.0f, 0.0f, lightSize, 0.0f);
+
+		Vector4D viewSpaceLightPos = modelViewMatrix * Vector4D(lightPosition.x, lightPosition.y, lightPosition.z, 1.0f);
+		Vector4D nearVec = projectionMatrix * (viewSpaceLightPos - diffVector);
+		Vector4D farVec = projectionMatrix * (viewSpaceLightPos + diffVector);
+
+		nearVal = clamp(nearVec.z / nearVec.w, -1.0f, 1.0f) * 0.5f + 0.5f;
+		if (nearVec.w <= 0.0f) {
+			nearVal = 0.0f;
+		}
+		farVal = clamp(farVec.z / farVec.w, -1.0f, 1.0f) * 0.5f + 0.5f;
+		if (farVec.w <= 0.0f) {
+			farVal = 0.0f;
+		}
+		// Sanity check
+		if (nearVal > farVal) {
+			nearVal = farVal;
+		}
+	};
 	cmdList->IASetVertexBuffers(0, 1, &m_lightingData.lightGeometryData.vbView);
 	for (int lightIndex = m_lightingData.numLights - 1; lightIndex >= 0; --lightIndex) {
 		const Light& light = m_lightingData.lights[lightIndex];
@@ -1609,6 +1636,10 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 		cmdList->SetGraphicsRootDescriptorTable(0, m_lightingData.lBufferCBVSDescriptors[lightIndex]);
 		cmdList->SetGraphicsRootDescriptorTable(1, m_lightingData.lBufferCBPSDescriptors[lightIndex]);
 
+		float nearVal;
+		float farVal;
+		CalculateDepthBounds(nearVal, farVal, lightPosRange.w, cbData.m[1], cbData.m[0], lightPosRange.xyz());
+		cmdList->OMSetDepthBounds(nearVal, farVal);
 		cmdList->DrawIndexedInstanced(m_lightingData.lightGeometryData.numFaces * 3, 1, 0, 0, 0);
 	}
 #endif

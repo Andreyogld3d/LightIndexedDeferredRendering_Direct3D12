@@ -187,7 +187,7 @@ private:
 		// for lightBufferConstantBuffer
 		D3D12_GPU_DESCRIPTOR_HANDLE lightBufferDescriptor;
 		//
-		ComPtr<ID3D12GraphicsCommandList> rtCommandList;
+		ComPtr<ID3D12GraphicsCommandList1> rtCommandList;
 		//
 		Light_t lights;
 		//

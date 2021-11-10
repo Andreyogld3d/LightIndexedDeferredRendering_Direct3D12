@@ -614,6 +614,10 @@ private:
 				a[2] * b.x + a[6] * b.y + a[10] * b.z + a[14] * b.w,
 				a[3] * b.x + a[7] * b.y + a[11] * b.z + a[15] * b.w);
 	}
+	INLINE friend Vector4D operator * (const Matrix4x4& a, const Vector4D& b)
+	{
+		return b * a;
+	}
 	INLINE friend Vector3D operator * (const Vector3D& b, const Matrix4x4& a)
 	{
 		return a * b;
