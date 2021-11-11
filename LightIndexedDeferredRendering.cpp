@@ -686,6 +686,26 @@ void LightIndexedDeferredRendering::InitGPULightCullng()
 	m_lightingData.copyEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 }
 
+template <typename InnerStructType, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE Type, typename DefaultArg = InnerStructType>
+struct alignas(void*) PipelineStateStreamSubject : std::pair<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE, InnerStructType> {
+public:
+	PipelineStateStreamSubject()
+	{
+		first = Type;
+		second = {};
+	}
+	PipelineStateStreamSubject& operator = (const InnerStructType& data) noexcept
+	{
+		first = Type;
+		second = data;
+		return *this;
+	}
+	operator InnerStructType& () noexcept
+	{
+		return second;
+	}
+};
+
 void LightIndexedDeferredRendering::InitLightingSystem()
 {
 	UINT descriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -837,7 +857,68 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	psoDesc.DSVFormat = depthStencilFormat;
 	psoDesc.SampleDesc.Count = 1;
+#define USE_PSO_STREAM
+#ifdef USE_PSO_STREAM
+
+	using PipelineStateSubObjectRootSignature = PipelineStateStreamSubject<ID3D12RootSignature*, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE>;
+	using PipelineStateSubObjectInputLayout = PipelineStateStreamSubject<D3D12_INPUT_LAYOUT_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT>;
+	using PipelineStateSubObjectPrimitiveTopology = PipelineStateStreamSubject<D3D12_PRIMITIVE_TOPOLOGY_TYPE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY>;
+	using PipelineStateSubObjectDepthStencil = PipelineStateStreamSubject<D3D12_DEPTH_STENCIL_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL>;
+	using PipelineStateSubObjectDepthStencil1 = PipelineStateStreamSubject<D3D12_DEPTH_STENCIL_DESC1, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1>;
+	using PipelineStateSubObjectDepthStencilFormat = PipelineStateStreamSubject<DXGI_FORMAT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT>;
+	using PipelineStateSubObjectRasterizerState = PipelineStateStreamSubject<D3D12_RASTERIZER_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER>;
+	using PipelineStateSubObjectBlendState = PipelineStateStreamSubject<D3D12_BLEND_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND>;
+	using PipelineStateSubObjectRtFormats = PipelineStateStreamSubject <D3D12_RT_FORMAT_ARRAY, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS>;
+	using PipelineStateSubObjectSampleDesc = PipelineStateStreamSubject<DXGI_SAMPLE_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC>;
+	using PipelineStateSubObjectSampleMask = PipelineStateStreamSubject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK>;
+	using PipelineStateSubObjectVS = PipelineStateStreamSubject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS>;
+	using PipelineStateSubObjectHS = PipelineStateStreamSubject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS>;
+	using PipelineStateSubObjectDS = PipelineStateStreamSubject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS>;
+	using PipelineStateSubObjectPS = PipelineStateStreamSubject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>;
+	using PipelineStateSubObjectCS = PipelineStateStreamSubject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CS>;
+	using PipelineStateSubObjectAS = PipelineStateStreamSubject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>;
+	using PipelineStateSubObjectMS = PipelineStateStreamSubject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>;
+
+
+	struct RtDBTPSOStreamDesc {
+		PipelineStateSubObjectInputLayout InputLayout;
+		PipelineStateSubObjectRootSignature RootSignature;
+		PipelineStateSubObjectVS VS;
+		PipelineStateSubObjectPS PS;
+		PipelineStateSubObjectRasterizerState RasterizerState;
+		PipelineStateSubObjectBlendState BlendState;
+		PipelineStateSubObjectDepthStencil1 DepthStencilState; // New depth stencil subobject with depth bounds test toggle
+		PipelineStateSubObjectSampleMask SampleMask;
+		PipelineStateSubObjectPrimitiveTopology PrimitiveTopologyType;
+		PipelineStateSubObjectDepthStencilFormat DSVFormat;
+		PipelineStateSubObjectSampleDesc SampleDesc;
+		PipelineStateSubObjectRtFormats RTVFormats;
+	};
+	RtDBTPSOStreamDesc desc = {};
+	desc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+	desc.RootSignature = m_lightingData.lightBufferRootSignature.Get();
+	desc.VS = CD3DX12_SHADER_BYTECODE(vertexShader);
+	desc.PS = CD3DX12_SHADER_BYTECODE(pixelShader);
+	desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+
+	D3D12_DEPTH_STENCIL_DESC1 depthStencilDesc1 = {};
+	depthStencilDesc1.DepthEnable = TRUE;
+	depthStencilDesc1.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	depthStencilDesc1.DepthBoundsTestEnable = TRUE;
+	desc.DepthStencilState = depthStencilDesc1;
+	desc.SampleMask = UINT_MAX;
+	desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	desc.RTVFormats.second.NumRenderTargets = 1;
+	desc.RTVFormats.second.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	desc.DSVFormat = depthStencilFormat;
+	desc.SampleDesc.second.Count = 1;
+
+	D3D12_PIPELINE_STATE_STREAM_DESC psoStreamDesc = { sizeof(desc),   &desc};
+	ThrowIfFailed(m_device->CreatePipelineState(&psoStreamDesc, IID_PPV_ARGS(&m_lightingData.lightSourcePipeline)));
+#else
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_lightingData.lightSourcePipeline)));
+#endif
 
 	D3D12_RENDER_TARGET_BLEND_DESC& RenderTarget = psoDesc.BlendState.RenderTarget[0];
 	RenderTarget.BlendEnable = TRUE;
