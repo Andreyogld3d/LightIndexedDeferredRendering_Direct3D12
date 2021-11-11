@@ -857,8 +857,18 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	psoDesc.DSVFormat = depthStencilFormat;
 	psoDesc.SampleDesc.Count = 1;
-#define USE_PSO_STREAM
-#ifdef USE_PSO_STREAM
+	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_lightingData.lightSourcePipeline)));
+
+	//#define USE_PSO_STREAM
+
+	auto SetBlend = [](D3D12_RENDER_TARGET_BLEND_DESC& RenderTarget)
+	{
+		RenderTarget.BlendEnable = TRUE;
+		RenderTarget.SrcBlend = D3D12_BLEND_ONE;
+		RenderTarget.DestBlend = D3D12_BLEND_BLEND_FACTOR;
+		RenderTarget.SrcBlendAlpha = D3D12_BLEND_ONE;
+		RenderTarget.DestBlendAlpha = D3D12_BLEND_BLEND_FACTOR;
+	};
 
 	using PipelineStateSubObjectRootSignature = PipelineStateStreamSubject<ID3D12RootSignature*, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE>;
 	using PipelineStateSubObjectInputLayout = PipelineStateStreamSubject<D3D12_INPUT_LAYOUT_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_INPUT_LAYOUT>;
@@ -900,11 +910,13 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	desc.VS = CD3DX12_SHADER_BYTECODE(vertexShader);
 	desc.PS = CD3DX12_SHADER_BYTECODE(pixelShader);
 	desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	desc.RasterizerState.second.FrontCounterClockwise = TRUE;
 	desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	SetBlend(desc.BlendState.second.RenderTarget[0]);
 
 	D3D12_DEPTH_STENCIL_DESC1 depthStencilDesc1 = {};
 	depthStencilDesc1.DepthEnable = FALSE;
-	depthStencilDesc1.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	depthStencilDesc1.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	depthStencilDesc1.DepthBoundsTestEnable = TRUE;
 	desc.DepthStencilState = depthStencilDesc1;
 	desc.SampleMask = UINT_MAX;
@@ -913,23 +925,15 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	desc.RTVFormats.second.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	desc.DSVFormat = depthStencilFormat;
 	desc.SampleDesc.second.Count = 1;
-
-	D3D12_PIPELINE_STATE_STREAM_DESC psoStreamDesc = { sizeof(desc),   &desc};
-	ThrowIfFailed(m_device->CreatePipelineState(&psoStreamDesc, IID_PPV_ARGS(&m_lightingData.lightSourcePipeline)));
+#ifdef USE_PSO_STREAM
+	D3D12_PIPELINE_STATE_STREAM_DESC psoStreamDesc = { sizeof(desc),   &desc };
+	ThrowIfFailed(m_device->CreatePipelineState(&psoStreamDesc, IID_PPV_ARGS(&m_lightingData.lightBufferPipeline)));
 #else
-	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_lightingData.lightSourcePipeline)));
-#endif
-
-	D3D12_RENDER_TARGET_BLEND_DESC& RenderTarget = psoDesc.BlendState.RenderTarget[0];
-	RenderTarget.BlendEnable = TRUE;
-	RenderTarget.SrcBlend = D3D12_BLEND_ONE;
-	RenderTarget.DestBlend = D3D12_BLEND_BLEND_FACTOR;
-	RenderTarget.SrcBlendAlpha = D3D12_BLEND_ONE;
-	RenderTarget.DestBlendAlpha = D3D12_BLEND_BLEND_FACTOR;
+	SetBlend(psoDesc.BlendState.RenderTarget[0]);
 	psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
 	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_lightingData.lightBufferPipeline)));
-
+#endif
 	const float lCoords = 0.9f * coord;
 	const float minR = m_lightingData.radiuseRange.x;
 	const float maxR = m_lightingData.radiuseRange.y;
