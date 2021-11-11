@@ -903,7 +903,7 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
 	D3D12_DEPTH_STENCIL_DESC1 depthStencilDesc1 = {};
-	depthStencilDesc1.DepthEnable = TRUE;
+	depthStencilDesc1.DepthEnable = FALSE;
 	depthStencilDesc1.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	depthStencilDesc1.DepthBoundsTestEnable = TRUE;
 	desc.DepthStencilState = depthStencilDesc1;
@@ -1722,6 +1722,7 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 		CalculateDepthBounds(nearVal, farVal, lightPosRange.w, cbData.m[1], cbData.m[0], lightPosRange.xyz());
 		cmdList->OMSetDepthBounds(nearVal, farVal);
 		cmdList->DrawIndexedInstanced(m_lightingData.lightGeometryData.numFaces * 3, 1, 0, 0, 0);
+		cmdList->OMSetDepthBounds(0.0f, 1.0f);
 	}
 #endif
 	// Indicate that the back buffer will now be used to present.
