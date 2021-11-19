@@ -1723,8 +1723,10 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 
 		float nearVal;
 		float farVal;
-		CalculateDepthBounds(nearVal, farVal, lightPosRange.w, cbData.m[1], cbData.m[0], lightPosRange.xyz());
-		cmdList->OMSetDepthBounds(nearVal, farVal);
+		const Matrix4x4& proj = camera.GetProjectionMatrix();
+		const Matrix4x4& view = camera.GetViewMatrix();
+		CalculateDepthBounds(nearVal, farVal, lightPosRange.w, view, proj, lightPosRange.xyz());
+		cmdList->OMSetDepthBounds(nearVal, farVal); 		//nearVal = min(0.5f, nearVal); // ??
 		cmdList->DrawIndexedInstanced(m_lightingData.lightGeometryData.numFaces * 3, 1, 0, 0, 0);
 		cmdList->OMSetDepthBounds(0.0f, 1.0f);
 	}
