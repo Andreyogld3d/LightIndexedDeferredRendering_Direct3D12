@@ -859,7 +859,7 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	psoDesc.SampleDesc.Count = 1;
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_lightingData.lightSourcePipeline)));
 
-	//#define USE_PSO_STREAM
+	#define USE_PSO_STREAM
 
 	auto SetBlend = [](D3D12_RENDER_TARGET_BLEND_DESC& RenderTarget)
 	{
@@ -1693,11 +1693,11 @@ void LightIndexedDeferredRendering::drawToLightBuffer()
 		Vector4D nearVec = projectionMatrix * (viewSpaceLightPos - diffVector);
 		Vector4D farVec = projectionMatrix * (viewSpaceLightPos + diffVector);
 
-		nearVal = clamp(nearVec.z / nearVec.w, -1.0f, 1.0f) * 0.5f + 0.5f;
+		nearVal = clamp(nearVec.z / nearVec.w, 0.0f, 1.0f); // GL: clamp(nearVec.z / nearVec.w, -1.0f, 1.0f) * 0.5f + 0.5f
 		if (nearVec.w <= 0.0f) {
 			nearVal = 0.0f;
 		}
-		farVal = clamp(farVec.z / farVec.w, -1.0f, 1.0f) * 0.5f + 0.5f;
+		farVal = clamp(farVec.z / farVec.w, 0.0f, 1.0f); // GL: clamp(farVec.z / farVec.w, -1.0f, 1.0f) * 0.5f + 0.5f;
 		if (farVec.w <= 0.0f) {
 			farVal = 0.0f;
 		}
