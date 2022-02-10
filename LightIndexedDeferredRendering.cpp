@@ -911,6 +911,7 @@ void LightIndexedDeferredRendering::InitLightingSystem()
 	desc.PS = CD3DX12_SHADER_BYTECODE(pixelShader);
 	desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	desc.RasterizerState.second.FrontCounterClockwise = TRUE;
+	desc.RasterizerState.second.DepthClipEnable = FALSE;
 	desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	SetBlend(desc.BlendState.second.RenderTarget[0]);
 
