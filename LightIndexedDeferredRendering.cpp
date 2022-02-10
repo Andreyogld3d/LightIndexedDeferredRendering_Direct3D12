@@ -1003,7 +1003,13 @@ void LightIndexedDeferredRendering::LoadPipeline()
             IID_PPV_ARGS(&m_device)
             ));
     }
-
+	D3D12_FEATURE_DATA_D3D12_OPTIONS2 d3d12Options2;
+	ThrowIfFailed(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &d3d12Options2, sizeof(d3d12Options2)));
+	if (!d3d12Options2.DepthBoundsTestSupported) {
+		MessageBoxA(Win32Application::GetHwnd(), "Direct3D12 device doesn't suppot Depth Bounds Test Feature", "Error", MB_ICONERROR);
+		m_device->Release();
+		exit(-1);
+	}
     // Describe and create the command queue.
     D3D12_COMMAND_QUEUE_DESC queueDesc = {};
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
